@@ -1,0 +1,176 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "provenance": []
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    },
+    "language_info": {
+      "name": "python"
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "code",
+      "execution_count": 1,
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/",
+          "height": 347
+        },
+        "id": "T55s8c7yK0Cb",
+        "outputId": "7a4e9799-12c3-4e3f-8b84-2aaed55c8cec"
+      },
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "Model Evaluation:\n",
+            "Mean Absolute Error: $20,939.34\n",
+            "R² Score: 0.9815\n",
+            "\n",
+            "Predicted Results for All Entries:\n",
+            "     Size  Bedrooms      Price  Predicted_Price\n",
+            "0    3974         6  869639.26    834597.592652\n",
+            "1    1660         3  391533.17    363637.316121\n",
+            "2    2094         3  462804.86    450526.908082\n",
+            "3    1930         4  423354.01    424296.922596\n",
+            "4    1895         5  427527.78    435352.844454\n",
+            "..    ...       ...        ...              ...\n",
+            "245  1093         1  244221.47    224826.855082\n",
+            "246  3127         3  706173.82    677617.584658\n",
+            "247  3731         6  816679.05    834597.592652\n",
+            "248   997         2  207638.26    224826.855082\n",
+            "249  3829         6  823131.98    834597.592652\n",
+            "\n",
+            "[250 rows x 4 columns]\n"
+          ]
+        },
+        {
+          "output_type": "display_data",
+          "data": {
+            "text/plain": [
+              "<IPython.core.display.Javascript object>"
+            ],
+            "application/javascript": [
+              "\n",
+              "    async function download(id, filename, size) {\n",
+              "      if (!google.colab.kernel.accessAllowed) {\n",
+              "        return;\n",
+              "      }\n",
+              "      const div = document.createElement('div');\n",
+              "      const label = document.createElement('label');\n",
+              "      label.textContent = `Downloading \"${filename}\": `;\n",
+              "      div.appendChild(label);\n",
+              "      const progress = document.createElement('progress');\n",
+              "      progress.max = size;\n",
+              "      div.appendChild(progress);\n",
+              "      document.body.appendChild(div);\n",
+              "\n",
+              "      const buffers = [];\n",
+              "      let downloaded = 0;\n",
+              "\n",
+              "      const channel = await google.colab.kernel.comms.open(id);\n",
+              "      // Send a message to notify the kernel that we're ready.\n",
+              "      channel.send({})\n",
+              "\n",
+              "      for await (const message of channel.messages) {\n",
+              "        // Send a message to notify the kernel that we're ready.\n",
+              "        channel.send({})\n",
+              "        if (message.buffers) {\n",
+              "          for (const buffer of message.buffers) {\n",
+              "            buffers.push(buffer);\n",
+              "            downloaded += buffer.byteLength;\n",
+              "            progress.value = downloaded;\n",
+              "          }\n",
+              "        }\n",
+              "      }\n",
+              "      const blob = new Blob(buffers, {type: 'application/binary'});\n",
+              "      const a = document.createElement('a');\n",
+              "      a.href = window.URL.createObjectURL(blob);\n",
+              "      a.download = filename;\n",
+              "      div.appendChild(a);\n",
+              "      a.click();\n",
+              "      div.remove();\n",
+              "    }\n",
+              "  "
+            ]
+          },
+          "metadata": {}
+        },
+        {
+          "output_type": "display_data",
+          "data": {
+            "text/plain": [
+              "<IPython.core.display.Javascript object>"
+            ],
+            "application/javascript": [
+              "download(\"download_d3dc6aac-6912-4925-b580-d0a708f67d30\", \"predicted_housing_prices.csv\", 8807)"
+            ]
+          },
+          "metadata": {}
+        }
+      ],
+      "source": [
+        "import pandas as pd\n",
+        "import numpy as np\n",
+        "from sklearn.ensemble import HistGradientBoostingRegressor\n",
+        "from sklearn.model_selection import train_test_split\n",
+        "from sklearn.metrics import mean_absolute_error, r2_score\n",
+        "\n",
+        "# Step 1: Generate synthetic housing dataset\n",
+        "np.random.seed(42)\n",
+        "n_samples = 250\n",
+        "sizes = np.random.randint(800, 4000, n_samples)\n",
+        "bedrooms = np.clip((sizes / 600 + np.random.normal(0, 1, n_samples)).round(), 1, 6).astype(int)\n",
+        "prices = (sizes * 200) + (bedrooms * 10000) + np.random.normal(0, 20000, n_samples)\n",
+        "\n",
+        "df = pd.DataFrame({\n",
+        "    'Size': sizes,\n",
+        "    'Bedrooms': bedrooms,\n",
+        "    'Price': prices.round(2)\n",
+        "})\n",
+        "\n",
+        "# Step 2: Prepare features and target\n",
+        "X = df[['Size', 'Bedrooms']]\n",
+        "y = df['Price']\n",
+        "\n",
+        "# Step 3: Train-test split\n",
+        "X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)\n",
+        "\n",
+        "# Step 4: Build and train the model\n",
+        "model = HistGradientBoostingRegressor()\n",
+        "model.fit(X_train, y_train)\n",
+        "\n",
+        "# Step 5: Evaluate the model\n",
+        "y_pred = model.predict(X_test)\n",
+        "mae = mean_absolute_error(y_test, y_pred)\n",
+        "r2 = r2_score(y_test, y_pred)\n",
+        "print(f\"Model Evaluation:\\nMean Absolute Error: ${mae:,.2f}\\nR² Score: {r2:.4f}\")\n",
+        "\n",
+        "# Step 6: Predict for all entries and save results\n",
+        "df['Predicted_Price'] = model.predict(X)\n",
+        "\n",
+        "# Step 7: Show full result\n",
+        "print(\"\\nPredicted Results for All Entries:\")\n",
+        "print(df)\n",
+        "\n",
+        "# Step 8: Save to CSV\n",
+        "output_file = \"predicted_housing_prices.csv\"\n",
+        "df.to_csv(output_file, index=False)\n",
+        "\n",
+        "# Step 9 (Optional - for Google Colab): Enable file download\n",
+        "try:\n",
+        "    from google.colab import files\n",
+        "    files.download(output_file)\n",
+        "except ImportError:\n",
+        "    print(f\"\\nFile saved as: {output_file} (run in Colab to enable download)\")"
+      ]
+    }
+  ]
+}
